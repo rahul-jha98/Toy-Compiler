@@ -11,7 +11,9 @@ tokens = lexer.lex(text_input)
 text_input = """
 a = 2 + 3 - 1;
 print(a);
-print(3 + 2 * 1);
+b = a * 2;
+c = b;
+print(3 + c);
 """
 
 lexer = Lexer().get_lexer()
