@@ -65,12 +65,16 @@ class Parser():
 
         @self.pg.production('expression : NUMBER')
         @self.pg.production('expression : VAR')
+        @self.pg.production('expression : OPEN_PAREN expression CLOSE_PAREN')
         def stopexpression(p):
             if p[0].gettokentype() == 'NUMBER':
                 return Number(p[0].value)
 
             elif p[0].gettokentype() == 'VAR':
                 return Var(p[0].value)
+            
+            elif p[0].gettokentype() == 'OPEN_PAREN':
+                return Line(p[1])
 
         @self.pg.error
         def error_handle(token):
