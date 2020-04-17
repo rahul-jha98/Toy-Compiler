@@ -8,6 +8,15 @@ class Number():
         except ValueError:
             return float(self.value)
 
+class Bool():
+    def __init__(self, value):
+        self.value = value
+    
+    def eval(self):
+        return self.value
+
+
+
 
 class BinaryOp():
     def __init__(self, left, right):
@@ -35,6 +44,69 @@ class Div(BinaryOp):
 class Mod(BinaryOp):
     def eval(self):
         return self.left.eval() % self.right.eval()
+
+
+
+
+class RelOp():
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def truthvalue(self):
+        return True 
+
+
+    def eval(self):
+        return self.truthvalue()
+
+
+class Equals(RelOp):
+    def truthvalue(self):
+        return self.left.eval() == self.right.eval()
+
+
+class Greater(RelOp):
+    def truthvalue(self):
+        return self.left.eval() > self.right.eval()
+
+class Less(RelOp):
+    def truthvalue(self):
+        return self.left.eval() < self.right.eval()
+
+class LessEq(RelOp):
+    def truthvalue(self):
+        return self.left.eval() <= self.right.eval()
+
+class GreatEq(RelOp):
+    def truthvalue(self):
+        return self.left.eval() >= self.right.eval()
+
+
+class And:
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def eval(self):
+        return self.left.eval() and self.right.eval()
+
+class Or:
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def eval(self):
+        return self.left.eval() or self.right.eval()
+
+class Not:
+    def __init__(self, express):
+        self.express = express
+    
+    def eval(self):
+        return self.express.eval()
+
+
 
 
 
@@ -84,7 +156,6 @@ class Assign():
 
         if variables.get(lvalue, -1) == -1:
             variables[lvalue] = self.rvalue.eval()
-        
     
     def eval(self):
         return variables.get(self.lvalue)

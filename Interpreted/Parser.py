@@ -7,7 +7,10 @@ class Parser():
         self.pg = ParserGenerator(
             # A list of all token names accepted by the parser.
             ['NUMBER', 'PRINT', 'OPEN_PAREN', 'CLOSE_PAREN',
-             'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN'],
+             'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
+             'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
+             'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ'
+             ],
             
             precedence = [
                 ('left', ['SUM', 'SUB']),
@@ -25,24 +28,104 @@ class Parser():
             return Statements(p)
 
 
-        @self.pg.production('statements : printstatement')
-        @self.pg.production('statements : assignmentstatement')
-        @self.pg.production('statements : statements printstatement')
-        @self.pg.production('statements : statements assignmentstatement')
+        @self.pg.production('statements : onestatement')
+        @self.pg.production('statements : statements onestatement')
         def statements(p):
             return Line(p)
 
         
-        @self.pg.production('assignmentstatement : VAR ASSIGN expression SEMI_COLON')
+        @self.pg.production('onestatement : printstatement')
+        @self.pg.production('onestatement : assignmentstatement')
+        def onestatement(p):
+            return Line(p[0])
+
+
+
+
+        '''
+        ------- All Statements in the language -----------
+        '''
+        @self.pg.production('assignmentstatement : VAR ASSIGN allexpression SEMI_COLON')
         def assignmentstatement(p):
             return Assign(p[0].value, p[2])
+        
 
-
-        @self.pg.production('printstatement : PRINT OPEN_PAREN expression CLOSE_PAREN SEMI_COLON')
+        @self.pg.production('printstatement : PRINT OPEN_PAREN allexpression CLOSE_PAREN SEMI_COLON')
         def printstatement(p):
             return Print(p[2])
 
 
+
+
+        '''
+        ------- All Expressions in the language -----------
+        '''
+        @self.pg.production('allexpression : expression')
+        @self.pg.production('allexpression : log_expression')
+        def allexpression(p):
+            return Line(p[0])
+
+
+        ## Logical Expressions
+        @self.pg.production('log_expression : log_expression OR log_expression')
+        @self.pg.production('log_expression : log_expression AND log_expression')
+        @self.pg.production('log_expression : NOT log_expression')
+        def log_expression(p):
+
+            if len(p) == 3:
+                # And Or case
+                left = p[0]
+                right = p[2]
+                operator = p[1]
+
+                if operator.gettokentype() == 'OR':
+                    return Or(left, right)
+                else:
+                    return And(left, right)
+            else:
+                return Not(p[1])
+
+
+        @self.pg.production('log_expression : TRUE')
+        @self.pg.production('log_expression : FALSE')
+        @self.pg.production('log_expression : OPEN_PAREN log_expression CLOSE_PAREN')
+        def log_expression_value(p):
+            if p[0].gettokentype() == 'TRUE':
+                return Bool(True)
+            elif p[0].gettokentype() == "FALSE":
+                return Bool(False)
+            else:
+                return Line(p[1])
+
+
+        @self.pg.production('log_expression : rel_expression')
+        def log_expression_relation(p):
+            return Line(p[0])
+
+
+
+        ## Relational expressions
+        @self.pg.production('rel_expression : expression EQUALS expression')
+        @self.pg.production('rel_expression : expression LESS expression')
+        @self.pg.production('rel_expression : expression GREATER expression')
+        @self.pg.production('rel_expression : expression LESS_EQ expression')
+        @self.pg.production('rel_expression : expression GREAT_EQ expression')
+        def arithmatic_relations(p):
+            left = p[0]
+            right = p[2]
+            operator = p[1]
+            if operator.gettokentype() == 'EQUALS':
+                return Equals(left, right)
+            elif operator.gettokentype() == 'LESS':
+                return Less(left, right)
+            elif operator.gettokentype() == 'GREATER':
+                return Greater(left, right)
+            elif operator.gettokentype() == 'LESS_EQ':
+                return LessEq(left, right)
+            elif operator.gettokentype() == 'GREAT_EQ':
+                return GreatEq(left, right)
+
+        ## Arithmatic Expressions
         @self.pg.production('expression : expression SUM expression')
         @self.pg.production('expression : expression SUB expression')
         @self.pg.production('expression : expression MUL expression')
@@ -75,6 +158,11 @@ class Parser():
             
             elif p[0].gettokentype() == 'OPEN_PAREN':
                 return Line(p[1])
+
+
+
+
+
 
         @self.pg.error
         def error_handle(token):

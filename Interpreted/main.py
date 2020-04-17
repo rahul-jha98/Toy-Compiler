@@ -14,6 +14,7 @@ print(a);
 b = a * 2;
 c = b;
 print(3 + c);
+print(a == b);
 """
 
 lexer = Lexer().get_lexer()

@@ -5,9 +5,9 @@ from Codegen import CodeGen
 import os
 
 text_input = '''
-print(3 + 2 - 1);
 print(4 - 5 + 1);
 print(4 - (5 + 1));
+print((5 == 1) or ( 2 * 2 == 4));
 '''
 
 ## The last output is not correct

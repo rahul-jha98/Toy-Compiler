@@ -18,6 +18,17 @@ class Number():
         return i
 
 
+class Bool():
+    def __init__(self, builder, module, value):
+        self.builder = builder
+        self.module = module
+        self.value = value
+    
+    def eval(self):        
+        return ir.Constant(ir.IntType(8), int(self.value))
+       
+
+
 class BinaryOp():
     #operations for
     def __init__(self, builder, module, left, right):
@@ -52,6 +63,80 @@ class Mod(BinaryOp):
     def eval(self):
         i = self.builder.srem(self.left.eval(), self.right.eval())
         return i
+
+
+
+class RelOp():
+    def __init__(self, builder, module, left, right):
+        self.builder = builder
+        self.module = module
+        self.left = left
+        self.right = right
+
+    def truthvalue(self):
+        return True 
+
+
+    def eval(self):
+        return self.truthvalue()
+
+
+
+class Equals(RelOp):
+    def truthvalue(self):
+        return self.builder.icmp_signed('==', self.left.eval(), self.right.eval())
+
+
+class Greater(RelOp):
+    def truthvalue(self):
+        return self.builder.icmp_signed('>', self.left.eval(), self.right.eval())
+
+class Less(RelOp):
+    def truthvalue(self):
+        return self.builder.icmp_signed('<', self.left.eval(), self.right.eval())
+
+class LessEq(RelOp):
+    def truthvalue(self):
+        return self.builder.icmp_signed('<=', self.left.eval(), self.right.eval())
+
+class GreatEq(RelOp):
+    def truthvalue(self):
+        return self.builder.icmp_signed('>=', self.left.eval(), self.right.eval())
+
+
+
+
+
+
+class And:
+    def __init__(self, builder, module, left, right):
+        self.left = left
+        self.right = right
+        self.builder = builder
+        self.module = module
+        
+    def eval(self):
+        return self.builder.and_(self.left.eval(), self.right.eval())
+
+class Or:
+    def __init__(self, builder, module, left, right):
+        self.left = left
+        self.right = right
+        self.builder = builder
+        self.module = module
+
+    def eval(self):
+        return self.builder.or_(self.left.eval(), self.right.eval())
+
+class Not:
+    def __init__(self, builder, module, express):
+        self.express = express
+        self.builder = builder
+        self.module = module
+    
+    def eval(self):
+        return self.builder.sub(ir.Constant(ir.IntType(8), int(1)), self.express.eval())
+
 
 
 class Print():
