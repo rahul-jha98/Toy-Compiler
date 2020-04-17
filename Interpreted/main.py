@@ -17,6 +17,10 @@ print(3 + c);
 print(a == b);
 """
 
+text_input = """
+writeln(5);
+write(5 == 4, "Rahul", 3);
+"""
 lexer = Lexer().get_lexer()
 tokens = lexer.lex(text_input)
 

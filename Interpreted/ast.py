@@ -15,6 +15,17 @@ class Bool():
     def eval(self):
         return self.value
 
+class String():
+    def __init__(self, value, trim = True):
+        if trim: 
+            self.value = value[1:-1]
+        else:
+            self.value = value
+    
+    def eval(self):
+        return self.value
+
+
 
 
 
@@ -110,12 +121,12 @@ class Not:
 
 
 
-class Print():
+class Write():
     def __init__(self, value):
         self.value = value
 
     def eval(self):
-        print(self.value.eval())
+        print(self.value.eval(), end = '')
 
 
 class Line():

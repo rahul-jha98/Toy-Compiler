@@ -7,7 +7,8 @@ class Lexer():
 
     def _add_tokens(self):
         # Keywords
-        self.lexer.add('PRINT', r'print')
+        self.lexer.add('WRITELN', r'writeln')
+        self.lexer.add('WRITE', r'write')     
         self.lexer.add('TRUE', r'True')
         self.lexer.add('FALSE', r'False')
 
@@ -44,7 +45,7 @@ class Lexer():
         # Number
         #self.lexer.add('INT', r'^[-+]?\d+$')
         self.lexer.add('NUMBER',r'[-+]?[0-9]*\.?[0-9]+')
-
+        self.lexer.add('STRING', r'\"(\\.|[^\"])*\"')
 
         # Variable
         self.lexer.add('VAR', r'[A-Za-z_][A-Za-z0-9_]*')
@@ -52,7 +53,7 @@ class Lexer():
 
         #Assign
         self.lexer.add('ASSIGN', r'\=')
-
+        self.lexer.add('COMMA', r',')
 
 
         # Ignore spaces

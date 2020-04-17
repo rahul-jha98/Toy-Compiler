@@ -5,11 +5,13 @@ class Parser():
     def __init__(self, module, builder, printf):
         self.pg = ParserGenerator(
             # A list of all token names accepted by the parser.
-            ['NUMBER', 'PRINT', 'OPEN_PAREN', 'CLOSE_PAREN',
+            ['NUMBER', 'WRITE', 'WRITELN', 'OPEN_PAREN', 'CLOSE_PAREN',
              'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
-             'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ'
+             'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
+             'COMMA', 'STRING'
              ],
+            
              
              precedence = [
                 ('left', ['SUM', 'SUB']),
@@ -32,7 +34,8 @@ class Parser():
             return Line(self.builder, self.module, p)
 
         
-        @self.pg.production('onestatement : printstatement')
+        @self.pg.production('onestatement : writestatement')
+        @self.pg.production('onestatement : writelnstatement')
         @self.pg.production('onestatement : assignmentstatement')
         def onestatement(p):
             return Line(self.builder, self.module, p[0])
@@ -49,11 +52,30 @@ class Parser():
         
 
         
-        @self.pg.production('printstatement : PRINT OPEN_PAREN allexpression CLOSE_PAREN SEMI_COLON')
+        @self.pg.production('writestatement : WRITE OPEN_PAREN printstatement CLOSE_PAREN SEMI_COLON')
+        def writestatement(p):
+            return Line(self.builder, self.module, p[2])
+
+        @self.pg.production('writelnstatement : WRITELN OPEN_PAREN printstatement CLOSE_PAREN SEMI_COLON')
+        def writelnstatement(p):
+            withnewline = p[2].value
+            withnewline.append(Write(self.builder, self.module, self.printf, String("\n", trim = False)))
+            return Line(self.builder, self.module, withnewline)
+
+        @self.pg.production('printstatement : oneprintstatement')
+        @self.pg.production('printstatement : printstatement COMMA oneprintstatement')
         def printstatement(p):
-            return Print(self.builder, self.module, self.printf, p[2])
+            return Line(self.builder, self.module, p[::2])
 
-
+        @self.pg.production('oneprintstatement : allexpression')
+        @self.pg.production('oneprintstatement : STRING')
+        def oneprintstatement(p):
+            try:
+                isString = p[0].gettokentype()
+                return Write(self.builder, self.module, self.printf, String(p[0].value))
+            except AttributeError:
+                return Write(self.builder, self.module, self.printf, p[0])
+            return Write(self.builder, self.module, self.printf, p[0])
 
 
 

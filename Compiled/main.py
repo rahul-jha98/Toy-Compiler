@@ -4,10 +4,14 @@ from Parser import Parser
 from Codegen import CodeGen
 import os
 
+
+
+## write takes a series of , separated values and prints them
+## writeln is basically write with \n at end
 text_input = '''
-print(4 - 5 + 1);
-print(4 - (5 + 1));
-print((5 == 1) or ( 2 * 2 == 4));
+writeln("Rahul ", "is my name");
+write("Rahul ", 5 == 2);
+writeln(4 + 2 + 5);
 '''
 
 ## The last output is not correct

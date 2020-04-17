@@ -26,7 +26,17 @@ class Bool():
     
     def eval(self):        
         return ir.Constant(ir.IntType(8), int(self.value))
-       
+
+class String():
+    def __init__(self, value, trim = True):
+        if trim: 
+            self.value = value[1:-1]
+        else:
+            self.value = value
+    
+    def eval(self):
+        return self.value
+
 
 
 class BinaryOp():
@@ -139,7 +149,7 @@ class Not:
 
 
 
-class Print():
+class Write():
     def __init__(self, builder, module, printf, value):
         self.builder = builder
         self.module = module
@@ -148,19 +158,21 @@ class Print():
 
     def eval(self):
         global print_count
+
+
+
+        passvalue = True
         value = self.value.eval()
+    
+        if isinstance(self.value, String):            
+            passvalue = False
+            fmt = value + '\0'
 
-        # Declare argument list
+        else:
+            fmt = "%d \0"
 
-        ## This is type of pointer for string use 
-        ## IntType(8) for char
         voidptr_ty = ir.IntType(8).as_pointer()
 
-        ## Statemet to be used in printf
-        ## different for float and int
-        fmt = "%i \n\0"
-
-        ## Same char pointer dont change
         c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
                             bytearray(fmt.encode("utf8")))
 
@@ -174,7 +186,10 @@ class Print():
         fmt_arg = self.builder.bitcast(global_fmt, voidptr_ty)
 
         # Call Print Function
-        self.builder.call(self.printf, [fmt_arg, value])
+        if passvalue:
+            self.builder.call(self.printf, [fmt_arg, value])
+        else:
+            self.builder.call(self.printf, [fmt_arg])
 
 
 class Line():

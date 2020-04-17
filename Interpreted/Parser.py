@@ -6,10 +6,11 @@ class Parser():
     def __init__(self):
         self.pg = ParserGenerator(
             # A list of all token names accepted by the parser.
-            ['NUMBER', 'PRINT', 'OPEN_PAREN', 'CLOSE_PAREN',
+            ['NUMBER', 'WRITE', 'WRITELN', 'OPEN_PAREN', 'CLOSE_PAREN',
              'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
-             'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ'
+             'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
+             'COMMA', 'STRING'
              ],
             
             precedence = [
@@ -34,7 +35,8 @@ class Parser():
             return Line(p)
 
         
-        @self.pg.production('onestatement : printstatement')
+        @self.pg.production('onestatement : writestatement')
+        @self.pg.production('onestatement : writelnstatement')
         @self.pg.production('onestatement : assignmentstatement')
         def onestatement(p):
             return Line(p[0])
@@ -50,12 +52,30 @@ class Parser():
             return Assign(p[0].value, p[2])
         
 
-        @self.pg.production('printstatement : PRINT OPEN_PAREN allexpression CLOSE_PAREN SEMI_COLON')
+        @self.pg.production('writestatement : WRITE OPEN_PAREN printstatement CLOSE_PAREN SEMI_COLON')
+        def writestatement(p):
+            return Line(p[2])
+
+        @self.pg.production('writelnstatement : WRITELN OPEN_PAREN printstatement CLOSE_PAREN SEMI_COLON')
+        def writelnstatement(p):
+            withnewline = p[2].value
+            withnewline.append(Write(String("\n", trim = False)))
+            return Line(withnewline)
+
+        @self.pg.production('printstatement : oneprintstatement')
+        @self.pg.production('printstatement : printstatement COMMA oneprintstatement')
         def printstatement(p):
-            return Print(p[2])
+            return Line(p[::2])
 
-
-
+        @self.pg.production('oneprintstatement : allexpression')
+        @self.pg.production('oneprintstatement : STRING')
+        def oneprintstatement(p):
+            try:
+                isString = p[0].gettokentype()
+                return Write(String(p[0].value))
+            except AttributeError:
+                return Write(p[0])
+            return Write(p[0])
 
         '''
         ------- All Expressions in the language -----------
