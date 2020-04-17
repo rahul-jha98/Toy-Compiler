@@ -6,7 +6,13 @@ class Parser():
         self.pg = ParserGenerator(
             # A list of all token names accepted by the parser.
             ['NUMBER', 'PRINT', 'OPEN_PAREN', 'CLOSE_PAREN',
-             'SEMI_COLON', 'SUM', 'SUB']
+             'SEMI_COLON', 'SUM', 'SUB', 'MUL', 'DIV', 'MOD'],
+             
+             precedence = [
+                ('left', ['SUM', 'SUB']),
+                ('left', ['MUL', 'DIV']),
+                ('left', ['MOD'])
+            ]
         )
         self.module = module
         self.builder = builder
@@ -30,6 +36,9 @@ class Parser():
 
         @self.pg.production('expression : expression SUM expression')
         @self.pg.production('expression : expression SUB expression')
+        @self.pg.production('expression : expression MUL expression')
+        @self.pg.production('expression : expression DIV expression')
+        @self.pg.production('expression : expression MOD expression')
         def expression(p):
             left = p[0]
             right = p[2]
@@ -38,6 +47,12 @@ class Parser():
                 return Sum(self.builder, self.module, left, right)
             elif operator.gettokentype() == 'SUB':
                 return Sub(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'MUL':
+                return Mul(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'DIV':
+                return Div(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'MOD':
+                return Mod(self.builder, self.module, left, right)
 
         @self.pg.production('expression : NUMBER')
         def number(p):

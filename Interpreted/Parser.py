@@ -7,7 +7,14 @@ class Parser():
         self.pg = ParserGenerator(
             # A list of all token names accepted by the parser.
             ['NUMBER', 'PRINT', 'OPEN_PAREN', 'CLOSE_PAREN',
-             'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN']
+             'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN'],
+            
+            precedence = [
+                ('left', ['SUM', 'SUB']),
+                ('left', ['MUL', 'DIV']),
+                ('left', ['MOD'])
+            ]
+
         )
 
     def parse(self):
@@ -35,12 +42,13 @@ class Parser():
         def printstatement(p):
             return Print(p[2])
 
+
         @self.pg.production('expression : expression SUM expression')
         @self.pg.production('expression : expression SUB expression')
         @self.pg.production('expression : expression MUL expression')
         @self.pg.production('expression : expression DIV expression')
         @self.pg.production('expression : expression MOD expression')
-        def expression(p):
+        def expression(p):            
             left = p[0]
             right = p[2]
             operator = p[1]
@@ -56,12 +64,13 @@ class Parser():
                 return Mod(left, right)
 
         @self.pg.production('expression : NUMBER')
-        def number(p):
-            return Number(p[0].value)
-
         @self.pg.production('expression : VAR')
-        def number(p):
-            return Var(p[0].value)
+        def stopexpression(p):
+            if p[0].gettokentype() == 'NUMBER':
+                return Number(p[0].value)
+
+            elif p[0].gettokentype() == 'VAR':
+                return Var(p[0].value)
 
         @self.pg.error
         def error_handle(token):

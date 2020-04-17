@@ -38,6 +38,20 @@ class Sub(BinaryOp):
         i = self.builder.sub(self.left.eval(), self.right.eval())
         return i
 
+class Mul(BinaryOp):
+    def eval(self):
+        i = self.builder.mul(self.left.eval(), self.right.eval())
+        return i
+
+class Div(BinaryOp):
+    def eval(self):
+        i = self.builder.div(self.left.eval(), self.right.eval())
+        return i
+
+class Mod(BinaryOp):
+    def eval(self):
+        i = self.builder.mod(self.left.eval(), self.right.eval())
+        return i
 
 class Print():
     def __init__(self, builder, module, printf, value):

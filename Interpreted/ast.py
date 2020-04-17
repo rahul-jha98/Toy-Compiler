@@ -52,8 +52,11 @@ class Line():
         
 
     def eval(self):
-        for val in self.value:
-            val.eval()
+        if type(self.value) == list:
+            for value in self.value:
+                value.eval()
+        else:
+            return self.value.eval()
 
 class Statements():
     def __init__(self, value):

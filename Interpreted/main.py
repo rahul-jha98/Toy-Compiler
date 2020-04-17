@@ -9,7 +9,7 @@ lexer = Lexer().get_lexer()
 tokens = lexer.lex(text_input)
 
 text_input = """
-a = 2 + 3 - 1;
+a = 4 - 5 + 1;
 print(a);
 b = a * 2;
 c = b;
