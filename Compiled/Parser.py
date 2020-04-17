@@ -24,10 +24,16 @@ class Parser():
             return Statements(self.builder, self.module, p)
 
         @self.pg.production('statements : printstatement')
+        @self.pg.production('statements : assignmentstatement')
         @self.pg.production('statements : statements printstatement')
+        @self.pg.production('statements : statements assignmentstatement')
         def statements(p):
             return Line(self.builder, self.module, p)
 
+        @self.pg.production('assignmentstatement : VAR ASSIGN expression SEMI_COLON')
+        def assignmentstatement(p):
+            return Assign(p[0].value, p[2])
+        
         
         @self.pg.production('printstatement : PRINT OPEN_PAREN expression CLOSE_PAREN SEMI_COLON')
         def printstatement(p):
@@ -57,6 +63,10 @@ class Parser():
         @self.pg.production('expression : NUMBER')
         def number(p):
             return Number(self.builder, self.module, p[0].value)
+        
+        @self.pg.production('expression : VAR')
+        def number(p):
+            return Var(p[0].value)
 
         @self.pg.error
         def error_handle(token):

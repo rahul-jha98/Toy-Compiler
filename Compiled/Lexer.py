@@ -20,9 +20,15 @@ class Lexer():
         self.lexer.add('MUL', r'\*')
         self.lexer.add('MOD', r'\%')
         # Number
-        self.lexer.add('NUMBER', r'\d+')
+        #self.lexer.add('INT', r'^[-+]?\d+$')
+        self.lexer.add('NUMBER',r'[-+]?[0-9]*\.?[0-9]+')
+        # Variable
+        self.lexer.add('VAR', r'[A-Za-z_][A-Za-z0-9_]*')
+        #Assign
+        self.lexer.add('ASSIGN', r'\=')
         # Ignore spaces
         self.lexer.ignore('\s+')
+        
 
     def get_lexer(self):
         self._add_tokens()

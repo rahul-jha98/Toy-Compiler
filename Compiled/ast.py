@@ -1,4 +1,3 @@
-
 from llvmlite import ir
 
 ## Temporary variable to give unique name to each print statement
@@ -12,14 +11,15 @@ class Number():
         self.value = value
 
     def eval(self):
-        ## Setting the length of format to be used
-        ## Here we can check the type if we are to set type automatically
-        ## Else we can also make number, float as two types
-        i = ir.Constant(ir.IntType(32), int(self.value))
+        try:
+            i = ir.Constant(ir.IntType(32), int(self.value))
+        except ValueError:
+            i = ir.Constant(ir.FloatType(32), float(self.value))
         return i
 
 
 class BinaryOp():
+    #operations for
     def __init__(self, builder, module, left, right):
         self.builder = builder
         self.module = module
@@ -45,13 +45,14 @@ class Mul(BinaryOp):
 
 class Div(BinaryOp):
     def eval(self):
-        i = self.builder.div(self.left.eval(), self.right.eval())
+        i = self.builder.sdiv(self.left.eval(), self.right.eval())
         return i
 
 class Mod(BinaryOp):
     def eval(self):
-        i = self.builder.mod(self.left.eval(), self.right.eval())
+        i = self.builder.srem(self.left.eval(), self.right.eval())
         return i
+
 
 class Print():
     def __init__(self, builder, module, printf, value):
@@ -110,3 +111,4 @@ class Statements():
     def eval(self):
         for val in self.value:
             val.eval()
+
