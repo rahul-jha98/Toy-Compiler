@@ -25,7 +25,7 @@ class Bool():
         self.value = value
     
     def eval(self):        
-        return ir.Constant(ir.IntType(8), int(self.value))
+        return ir.Constant(ir.IntType(1), int(self.value))
 
 class String():
     def __init__(self, value, trim = True):
@@ -40,7 +40,7 @@ class String():
 
 
 class BinaryOp():
-    #operations for
+    #operations for binary operations
     def __init__(self, builder, module, left, right):
         self.builder = builder
         self.module = module
@@ -216,3 +216,32 @@ class Statements():
         for val in self.value:
             val.eval()
 
+
+variables = {}
+
+class Var():
+    def __init__(self, builder, module, lvalue):
+        self.lvalue = lvalue
+        self.builder = builder
+        self.module = module
+    
+    def eval(self):
+        return self.builder.load(variables.get(self.lvalue), name = self.lvalue)
+
+class Assign():
+    def __init__(self, builder, module, lvalue, rvalue):
+        self.lvalue = lvalue
+        self.rvalue = rvalue
+        self.builder = builder
+        self.module = module
+
+        
+    
+    def eval(self):
+        val = self.rvalue.eval()
+        if variables.get(self.lvalue, -1) == -1:
+            ptr = self.builder.alloca(ir.IntType(32), size = 1, name = self.lvalue)
+            variables[self.lvalue] = ptr
+
+        self.builder.store(val, variables.get(self.lvalue))
+        return val

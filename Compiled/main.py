@@ -9,9 +9,11 @@ import os
 ## write takes a series of , separated values and prints them
 ## writeln is basically write with \n at end
 text_input = '''
-writeln("Rahul ", "is my name");
-write("Rahul ", 5 == 2);
-writeln(4 + 2 + 5);
+writeln("Rahul ", "is my name ", 2 == 3);
+a = 5;
+b = 8 % a;
+writeln(b);
+writeln(a + b);
 '''
 
 ## The last output is not correct

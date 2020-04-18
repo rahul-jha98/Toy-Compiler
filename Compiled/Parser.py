@@ -182,7 +182,7 @@ class Parser():
                 return Number(self.builder, self.module, p[0].value)
 
             elif p[0].gettokentype() == 'VAR':
-                return Var(p[0].value)
+                return Var(self.builder, self.module, p[0].value)
             
             elif p[0].gettokentype() == 'OPEN_PAREN':
                 return Line(self.builder, self.module, p[1])
