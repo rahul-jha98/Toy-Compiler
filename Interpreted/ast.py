@@ -165,8 +165,32 @@ class Assign():
         self.lvalue = lvalue
         self.rvalue = rvalue
 
-        if variables.get(lvalue, -1) == -1:
-            variables[lvalue] = self.rvalue.eval()
     
     def eval(self):
+        if variables.get(self.lvalue, -1) == -1:
+            variables[self.lvalue] = self.rvalue.eval()
+        else:
+            variables[self.lvalue] = self.rvalue.eval()
         return variables.get(self.lvalue)
+
+
+class IfElse():
+    def __init__(self, condition, then, otherwise):
+        self.condition = condition
+        self.then = then
+        self.otherwise = otherwise
+
+    def eval(self):
+        if self.condition.eval():
+            self.then.eval()
+        else:
+            self.otherwise.eval()
+
+class If():
+    def __init__(self, condition, then):
+        self.condition = condition
+        self.then = then
+    
+    def eval(self):
+        if self.condition.eval():
+            return self.then.eval()

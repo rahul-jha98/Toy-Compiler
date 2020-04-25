@@ -18,8 +18,16 @@ print(a == b);
 """
 
 text_input = """
-writeln(5);
-write(5 == 4, "Rahul", 3);
+a = 2;
+if a == 2 {
+    a = 3;
+    writeln(5);
+    writeln(4 * 8);
+}
+else if a == 3 {
+    writeln(5 == 4, "Rahul", 3);
+} 
+writeln("hello", 5);
 """
 lexer = Lexer().get_lexer()
 tokens = lexer.lex(text_input)

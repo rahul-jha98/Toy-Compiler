@@ -13,6 +13,11 @@ class Lexer():
         self.lexer.add('FALSE', r'False')
 
 
+        self.lexer.add('IF', r'if')
+        self.lexer.add('ELSE', r'else')
+        self.lexer.add('OPEN_CURLY', r'\{')
+        self.lexer.add('CLOSE_CURLY', r'\}')
+
         # Parenthesis
         self.lexer.add('OPEN_PAREN', r'\(')
         self.lexer.add('CLOSE_PAREN', r'\)')

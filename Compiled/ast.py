@@ -217,7 +217,11 @@ class Statements():
             val.eval()
 
 
-variables = {}
+allvariables = {}
+scopeStack = []
+scopeStack.append(allvariables)
+
+variables = scopeStack[0]
 
 class Var():
     def __init__(self, builder, module, lvalue):
@@ -226,7 +230,12 @@ class Var():
         self.module = module
     
     def eval(self):
-        return self.builder.load(variables.get(self.lvalue), name = self.lvalue)
+        try :
+            return self.builder.load(variables.get(self.lvalue), name = self.lvalue)
+        except Exception:
+            raise Exception("The variable named {} was used but never defined".format(self.lvalue))
+
+        
 
 class Assign():
     def __init__(self, builder, module, lvalue, rvalue):
@@ -242,6 +251,54 @@ class Assign():
         if variables.get(self.lvalue, -1) == -1:
             ptr = self.builder.alloca(ir.IntType(32), size = 1, name = self.lvalue)
             variables[self.lvalue] = ptr
-
+        
         self.builder.store(val, variables.get(self.lvalue))
         return val
+
+
+class IfElse():
+    def __init__(self, builder, module, condition, then, otherwise):
+        self.builder = builder
+        self.module = module
+        self.condition = condition
+        self.then = Line(builder, module, [Scope(1), then, Scope(-1)])
+        self.otherwise = Line(builder, module, [Scope(1), otherwise, Scope(-1)])
+
+    def eval(self):
+        predicate = self.condition.eval()
+        with self.builder.if_else(predicate) as (then, otherwise):
+            with then:
+                self.then.eval()
+            with otherwise:
+                self.otherwise.eval()
+
+class If():
+    def __init__(self,builder, module, condition, then):
+        self.builder = builder
+        self.module = module
+        self.condition = condition
+        self.then = Line(builder, module, [Scope(1), then, Scope(-1)])
+    
+    def eval(self):
+        predicate = self.condition.eval()
+        with self.builder.if_then(predicate) as (then):
+            with then:
+                return self.then.eval()
+
+
+class Scope():
+    def __init__(self, toPush):
+        self.toPush = toPush
+
+    def eval(self):
+        global variables, scopeStack
+        if self.toPush == 1:
+            newVariables = {}
+            for key, value in variables.items():
+                newVariables[key] = variables[key]
+            scopeStack.append(newVariables)
+            variables = newVariables
+
+        else:
+            scopeStack = scopeStack[:-1]
+            variables = scopeStack[-1]

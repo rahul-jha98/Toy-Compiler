@@ -10,7 +10,7 @@ class Parser():
              'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
              'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
-             'COMMA', 'STRING'
+             'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY'
              ],
             
             precedence = [
@@ -37,6 +37,7 @@ class Parser():
         
         @self.pg.production('onestatement : writestatement')
         @self.pg.production('onestatement : writelnstatement')
+        @self.pg.production('onestatement : ifelsestatement')
         @self.pg.production('onestatement : assignmentstatement')
         def onestatement(p):
             return Line(p[0])
@@ -76,6 +77,23 @@ class Parser():
             except AttributeError:
                 return Write(p[0])
             return Write(p[0])
+
+
+        @self.pg.production('ifelsestatement : IF log_expression block ELSE block')
+        @self.pg.production('ifelsestatement : IF log_expression block')
+        def ifelsestatement(p):
+            if len(p) == 3:
+                return If(p[1], p[2])
+            else:
+                return IfElse(p[1], p[2], p[4])
+
+        @self.pg.production('block : onestatement')
+        @self.pg.production('block : OPEN_CURLY statements CLOSE_CURLY')
+        def block(p):
+            if len(p) == 1:
+                return Line(p[0])
+            else:
+                return Line(p[1])
 
         '''
         ------- All Expressions in the language -----------
