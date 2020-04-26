@@ -1,3 +1,6 @@
+fucntions = {}
+
+
 class Number():
     def __init__(self, value):
         self.value = value
@@ -194,3 +197,13 @@ class If():
     def eval(self):
         if self.condition.eval():
             return self.then.eval()
+
+
+class DefineFunction():
+    def __init__(self, name, argslist, block):
+        self.name = name
+        self.argslist = argslist
+        self.block = block
+    
+    def eval(self):
+        return self.name

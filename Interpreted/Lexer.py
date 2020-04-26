@@ -11,6 +11,7 @@ class Lexer():
         self.lexer.add('WRITE', r'write')     
         self.lexer.add('TRUE', r'True')
         self.lexer.add('FALSE', r'False')
+        self.lexer.add('FUNCTION', r'function')
 
         self.lexer.add('IF', r'if')
         self.lexer.add('ELSE', r'else')

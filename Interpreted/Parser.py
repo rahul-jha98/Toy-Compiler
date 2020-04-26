@@ -10,7 +10,8 @@ class Parser():
              'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
              'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
-             'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY', 'NOPS'
+             'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY', 'NOPS',
+             'FUNCTION'
              ],
             
             precedence = [
@@ -35,6 +36,7 @@ class Parser():
             return Line(p)
 
         @self.pg.production('onestatement : noopsstatement')
+        @self.pg.production('onestatement : functiondefination')
         @self.pg.production('onestatement : writestatement')
         @self.pg.production('onestatement : writelnstatement')
         @self.pg.production('onestatement : ifelsestatement')
@@ -50,6 +52,30 @@ class Parser():
         @self.pg.production('noopsstatement : NOPS SEMI_COLON')
         def noopsstatement(p):
             return Line([])
+
+        @self.pg.production('functiondefination : FUNCTION VAR OPEN_PAREN argslist CLOSE_PAREN block')
+        @self.pg.production('fucntiondefination : FUNCTION VAR OPEN_PAREN CLOSE_PAREN block')
+        def functiondefination(p):
+            if len(p) == 5:
+                return DefineFunction(p[1].value, [], p[4])
+            else:
+                return DefineFunction(p[1].value, p[3], p[5])
+
+
+        @self.pg.production('argslist : VAR')
+        @self.pg.production('argslist : argslist COMMA VAR')
+        def argslist(p):
+            if len(p) == 1:
+                return p[0].value
+            
+            else:
+                values = p[:-1:2]
+                if type(values[0]) == list:
+                    values[0].append(p[-1].value)
+                    return values[0]
+                else:
+                    values.append(p[-1].value)
+                    return values
 
 
         @self.pg.production('assignmentstatement : VAR ASSIGN allexpression SEMI_COLON')

@@ -1,3 +1,4 @@
+from Preprocessor import Preprocessor
 from Lexer import Lexer
 from Parser import Parser
 
@@ -17,16 +18,24 @@ print(3 + c);
 print(a == b);
 """
 
-text_input = """
+raw_input_text = """
 a = 2;
-if a == 2 {
-    nothing;
+function apple(a, b, c) {
+    a = 2;
 }
+if a == 2 {
+    nothing; ## This to show that we are doing nothing here
+}
+## This is also a raw input file
 else if a == 3 {
     writeln(5 == 4, "Rahul", 3);
 } 
 writeln("hello ", 5);
 """
+
+preprocessor = Preprocessor(raw_input_text)
+text_input = preprocessor.get_processed_input()
+
 lexer = Lexer().get_lexer()
 tokens = lexer.lex(text_input)
 
