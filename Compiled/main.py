@@ -22,9 +22,9 @@ else if a == 3 {
 } else {
     writeln("else");
 }
-writeln(b);
-'''
 
+writeln(2 == 3);
+'''
 ## The last output is not correct
 ## Will change the logic of execution later so that
 ## Precedence is left associative
@@ -37,6 +37,7 @@ codegen = CodeGen()
 module = codegen.module
 builder = codegen.builder
 printf = codegen.printf
+
 
 pg = Parser(module, builder, printf)
 pg.parse()

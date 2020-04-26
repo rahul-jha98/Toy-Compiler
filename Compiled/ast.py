@@ -4,6 +4,46 @@ from llvmlite import ir
 print_count = 0
 
 
+globalTrue = None
+globalFalse = None
+
+def initialize(builder, module):
+    global globalTrue, globalFalse
+    
+    fmt = "True" + '\0'
+    voidptr_ty = ir.IntType(8).as_pointer()
+
+    c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
+                        bytearray(fmt.encode("utf8")))
+
+    ## Setting global variable for the file
+    global_fmt = ir.GlobalVariable(module, c_fmt.type, name="True")
+
+    global_fmt.linkage = 'internal'
+    global_fmt.global_constant = True
+    global_fmt.initializer = c_fmt
+    fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
+    globalTrue = fmt_arg
+
+
+    fmt = "False" + '\0'
+    voidptr_ty = ir.IntType(8).as_pointer()
+
+    c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
+                        bytearray(fmt.encode("utf8")))
+
+    ## Setting global variable for the file
+    global_fmt = ir.GlobalVariable(module, c_fmt.type, name="False")
+
+    global_fmt.linkage = 'internal'
+    global_fmt.global_constant = True
+    global_fmt.initializer = c_fmt
+    fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
+    globalFalse = fmt_arg
+
+
+
+
 class Number():
     def __init__(self, builder, module, value):
         self.builder = builder
@@ -145,7 +185,17 @@ class Not:
         self.module = module
     
     def eval(self):
-        return self.builder.sub(ir.Constant(ir.IntType(8), int(1)), self.express.eval())
+        return self.builder.not_(self.express.eval())
+
+
+
+def print_true_or_false(builder, module, printf, predicate):
+    with builder.if_else(predicate) as (then, otherwise):
+        with then:
+            builder.call(printf, [globalTrue])
+        with otherwise:
+            builder.call(printf, [globalFalse])
+
 
 
 
@@ -159,17 +209,17 @@ class Write():
     def eval(self):
         global print_count
 
-
-
+        
         passvalue = True
         value = self.value.eval()
-    
         if isinstance(self.value, String):            
             passvalue = False
             fmt = value + '\0'
-
-        else:
+        elif value.type != ir.IntType(1):
             fmt = "%d \0"
+        else:
+            print_true_or_false(self.builder, self.module, self.printf, value)
+            return
 
         voidptr_ty = ir.IntType(8).as_pointer()
 

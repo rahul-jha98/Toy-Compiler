@@ -14,13 +14,13 @@ class Lexer():
 
         self.lexer.add('IF', r'if')
         self.lexer.add('ELSE', r'else')
-        self.lexer.add('OPEN_CURLY', r'\{')
-        self.lexer.add('CLOSE_CURLY', r'\}')
+        self.lexer.add('NOPS', r'nothing')
 
         # Parenthesis
         self.lexer.add('OPEN_PAREN', r'\(')
         self.lexer.add('CLOSE_PAREN', r'\)')
-
+        self.lexer.add('OPEN_CURLY', r'\{')
+        self.lexer.add('CLOSE_CURLY', r'\}')
 
         # Semi Colon
         self.lexer.add('SEMI_COLON', r'\;')

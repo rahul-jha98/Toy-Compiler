@@ -9,7 +9,8 @@ class Parser():
              'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
              'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
-             'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY'
+             'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY',
+             'NOPS'
              ],
             
              
@@ -23,6 +24,8 @@ class Parser():
         self.builder = builder
         self.printf = printf
 
+        initialize(builder, module)
+
     def parse(self):
         @self.pg.production('program : statements')
         def program(p):
@@ -34,6 +37,7 @@ class Parser():
             return Line(self.builder, self.module, p)
 
         
+        @self.pg.production('onestatement : noopsstatement')
         @self.pg.production('onestatement : writestatement')
         @self.pg.production('onestatement : writelnstatement')
         @self.pg.production('onestatement : ifelsestatement')
@@ -47,6 +51,11 @@ class Parser():
         '''
         ------- All Statements in the language -----------
         '''
+        @self.pg.production('noopsstatement : NOPS SEMI_COLON')
+        def noopsstatement(p):
+            return Line([])
+            
+
         @self.pg.production('assignmentstatement : VAR ASSIGN expression SEMI_COLON')
         def assignmentstatement(p):
             return Assign(self.builder, self.module, p[0].value, p[2])
