@@ -10,6 +10,7 @@ class CodeGen():
         self._config_llvm()
         self._create_execution_engine()
         self._declare_print_function()
+        self._declare_scan_function()
 
     def _config_llvm(self):
         # Config LLVM
@@ -39,6 +40,12 @@ class CodeGen():
         printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
         self.printf = printf
+
+    def _declare_scan_function(self):
+        voidptr_ty = ir.IntType(32).as_pointer()
+        scanf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        scanf = ir.Function(self.module, scanf_ty, name="scanf")
+        self.scanf = scanf
 
     def _compile_ir(self):
         """

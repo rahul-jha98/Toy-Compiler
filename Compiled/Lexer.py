@@ -1,6 +1,9 @@
 from rply import LexerGenerator
 
-
+'''
+    This is the second phase of the compiler. In Lexical analysis we 
+    take the raw input and process it in the form of tokens
+'''
 class Lexer():
     def __init__(self):
         self.lexer = LexerGenerator()
@@ -45,29 +48,28 @@ class Lexer():
 
         ## Relational Operators
         self.lexer.add('EQUALS', r'==')
-        self.lexer.add('LESS', r'<')
-        self.lexer.add('GREATER', r'>')
         self.lexer.add('LESS_EQ', r'<=')
         self.lexer.add('GREAT_EQ', r'>=')
+        self.lexer.add('LESS', r'<')
+        self.lexer.add('GREATER', r'>')
+        self.lexer.add('NOT_EQUALS', r'!=')
+
 
         # Number
-        #self.lexer.add('INT', r'^[-+]?\d+$')
-        self.lexer.add('NUMBER',r'[-+]?[0-9]*\.?[0-9]+')
+        self.lexer.add('NUMBER',r'[0-9]*\.?[0-9]+')
         self.lexer.add('STRING', r'\"(\\.|[^\"])*\"')
 
-        # Variable
+        # Variable Name
         self.lexer.add('VAR', r'[A-Za-z_][A-Za-z0-9_]*')
         
 
-        #Assign
+        #Assign and comma
         self.lexer.add('ASSIGN', r'\=')
         self.lexer.add('COMMA', r',')
 
 
         # Ignore spaces
         self.lexer.ignore('\s+')
-        #self.lexer.ignore('\n+')
-        #self.lexer.ignore('\\*.*?\\*/')
 
         
 
