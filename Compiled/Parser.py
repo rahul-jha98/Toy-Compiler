@@ -2,7 +2,7 @@ from rply import ParserGenerator
 from ast import *
 
 class Parser():
-    def __init__(self, module, builder, printf):
+    def __init__(self, module, builder, printf, definations = {}):
         self.pg = ParserGenerator(
             # A list of all token names accepted by the parser.
             ['NUMBER', 'WRITE', 'WRITELN', 'OPEN_PAREN', 'CLOSE_PAREN',
@@ -10,7 +10,7 @@ class Parser():
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
              'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
              'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY',
-             'NOPS'
+             'NOPS','FUNCTION'
              ],
             
              
@@ -24,7 +24,7 @@ class Parser():
         self.builder = builder
         self.printf = printf
 
-        initialize(builder, module)
+        initialize(builder, module, definations)
 
     def parse(self):
         @self.pg.production('program : statements')
@@ -38,6 +38,7 @@ class Parser():
 
         
         @self.pg.production('onestatement : noopsstatement')
+        @self.pg.production('onestatement : functiondefination')
         @self.pg.production('onestatement : writestatement')
         @self.pg.production('onestatement : writelnstatement')
         @self.pg.production('onestatement : ifelsestatement')
@@ -55,6 +56,32 @@ class Parser():
         def noopsstatement(p):
             return Line([])
             
+
+        @self.pg.production('functiondefination : FUNCTION VAR OPEN_PAREN argslist CLOSE_PAREN SEMI_COLON')
+        @self.pg.production('functiondefination : FUNCTION VAR OPEN_PAREN CLOSE_PAREN SEMI_COLON')
+        def functiondefination(p):
+            print(p)
+            if len(p) == 5:
+                return DefineFunction(self.builder, self.module, self.printf, p[1].value, [])
+            else:
+                return DefineFunction(self.builder, self.module, self.printf, p[1].value, p[3])
+
+        
+        @self.pg.production('argslist : VAR')
+        @self.pg.production('argslist : argslist COMMA VAR')
+        def argslist(p):
+            print(2)
+            if len(p) == 1:
+                return p[0].value
+            
+            else:
+                values = p[:-1:2]
+                if type(values[0]) == list:
+                    values[0].append(p[-1].value)
+                    return values[0]
+                else:
+                    values.append(p[-1].value)
+                    return values
 
         @self.pg.production('assignmentstatement : VAR ASSIGN expression SEMI_COLON')
         def assignmentstatement(p):
@@ -99,6 +126,7 @@ class Parser():
         @self.pg.production('block : onestatement')
         @self.pg.production('block : OPEN_CURLY statements CLOSE_CURLY')
         def block(p):
+            print(3)
             if len(p) == 1:
                 return Line(self.builder, self.module, p[0])
             else:

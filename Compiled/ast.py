@@ -1,4 +1,8 @@
 from llvmlite import ir
+from Lexer import Lexer
+
+from rply import ParserGenerator
+
 
 ## Temporary variable to give unique name to each print statement
 print_count = 0
@@ -7,39 +11,46 @@ print_count = 0
 globalTrue = None
 globalFalse = None
 
-def initialize(builder, module):
-    global globalTrue, globalFalse
+functions = {}
+function_definations = {}
+functions_args = {}
+
+def initialize(builder, module, definations):
+    global globalTrue, globalFalse, function_definations
+
+    function_definations = definations
     
-    fmt = "True" + '\0'
-    voidptr_ty = ir.IntType(8).as_pointer()
+    if globalTrue == None:
+        fmt = "True" + '\0'
+        voidptr_ty = ir.IntType(8).as_pointer()
 
-    c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
-                        bytearray(fmt.encode("utf8")))
+        c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
+                            bytearray(fmt.encode("utf8")))
 
-    ## Setting global variable for the file
-    global_fmt = ir.GlobalVariable(module, c_fmt.type, name="True")
+        ## Setting global variable for the file
+        global_fmt = ir.GlobalVariable(module, c_fmt.type, name="True")
 
-    global_fmt.linkage = 'internal'
-    global_fmt.global_constant = True
-    global_fmt.initializer = c_fmt
-    fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
-    globalTrue = fmt_arg
+        global_fmt.linkage = 'internal'
+        global_fmt.global_constant = True
+        global_fmt.initializer = c_fmt
+        fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
+        globalTrue = fmt_arg
 
 
-    fmt = "False" + '\0'
-    voidptr_ty = ir.IntType(8).as_pointer()
+        fmt = "False" + '\0'
+        voidptr_ty = ir.IntType(8).as_pointer()
 
-    c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
-                        bytearray(fmt.encode("utf8")))
+        c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
+                            bytearray(fmt.encode("utf8")))
 
-    ## Setting global variable for the file
-    global_fmt = ir.GlobalVariable(module, c_fmt.type, name="False")
+        ## Setting global variable for the file
+        global_fmt = ir.GlobalVariable(module, c_fmt.type, name="False")
 
-    global_fmt.linkage = 'internal'
-    global_fmt.global_constant = True
-    global_fmt.initializer = c_fmt
-    fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
-    globalFalse = fmt_arg
+        global_fmt.linkage = 'internal'
+        global_fmt.global_constant = True
+        global_fmt.initializer = c_fmt
+        fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
+        globalFalse = fmt_arg
 
 
 
@@ -251,6 +262,7 @@ class Line():
     def eval(self):
         if type(self.value) == list:
             for value in self.value:
+                print(value)
                 value.eval()
         else:
             return self.value.eval()
@@ -280,6 +292,7 @@ class Var():
         self.module = module
     
     def eval(self):
+        print(variables)
         try :
             return self.builder.load(variables.get(self.lvalue), name = self.lvalue)
         except Exception:
@@ -334,21 +347,426 @@ class If():
         with self.builder.if_then(predicate) as (then):
             with then:
                 return self.then.eval()
+for_count = 0
+class For():
+    def __init__(self,builder, module, initialization, cond, after, block):
+        global for_count
+        self.builder = builder
+        self.module = module
+        self.initialization = initialization
+        self.cond = cond
+        self.after = after
+        self.block = Line(builder, module, [Scope(1), block, Scope(-1)])
+        self.for_count = for_count
+        
+        for_count = for_count + 1
+    
+    def eval(self):
+        Scope(1).eval()
+
+        self.initialization.eval()
+        loop = self.builder.append_basic_block('loop{}'.format(self.for_count))
+        self.builder.branch(loop)
+        self.builder.position_at_start(loop)
+        
+        predicate = self.cond.eval()
+
+        with self.builder.if_then(predicate) as then:
+            print(self.block)
+            self.block.eval()
+
+            self.after.eval()
+
+            predicate = self.cond.eval()
+
+            loop_end = self.builder.block
+            loop_end_bb = self.builder.append_basic_block('afterloop{}'.format(self.for_count))
+            self.builder.cbranch(predicate, loop, loop_end_bb)
+            self.builder.position_at_start(loop_end_bb)
+        Scope(-1).eval()
+
 
 
 class Scope():
-    def __init__(self, toPush):
+    def __init__(self, toPush, copy = True):
         self.toPush = toPush
+        self.copy = copy
 
     def eval(self):
         global variables, scopeStack
         if self.toPush == 1:
             newVariables = {}
-            for key, value in variables.items():
-                newVariables[key] = variables[key]
+            if self.copy:
+                for key, value in variables.items():
+                    newVariables[key] = variables[key]
+
             scopeStack.append(newVariables)
             variables = newVariables
 
         else:
             scopeStack = scopeStack[:-1]
             variables = scopeStack[-1]
+
+class DefineFunction():
+    def __init__(self, builder, module, printf, name, argslist):
+        self.builder = builder
+        self.module = module
+        self.name = name
+        self.argslist = argslist
+        self.printf = printf
+
+    def eval(self):
+        ## Creating the function type
+        func_type = ir.FunctionType(ir.IntType(32), 
+                                [ir.IntType(32)] * len(self.argslist))
+        
+        if self.name in  functions.keys():
+            raise Exception("Function with the name already exists")
+        
+        functions[self.name] = self
+
+        func = ir.Function(self.module, func_type, self.name)
+
+        bb_entry = func.append_basic_block('entry')
+        self.builder = ir.IRBuilder(bb_entry)
+
+        Scope(1, False).eval()
+
+        for i, arg in enumerate(func.args):
+            arg.name = self.argslist[i]
+            alloca = self.builder.alloca(ir.IntType(32), name=arg.name)
+            self.builder.store(arg, alloca)
+            variables[arg.name] = alloca
+
+        
+        text_input = function_definations[self.name]
+        lexer = Lexer().get_lexer()
+        tokens = lexer.lex(text_input)
+
+
+        pg = Parser(self.module, self.builder, self.printf, function_definations)
+        pg.parse()
+        parser = pg.get_parser()
+        parser.parse(tokens).eval()
+        
+        Scope(-1).eval()
+        functions[self.name] = func
+
+class CallFunction():
+    def __init__(self, builder, module, name, argslist):
+        self.module = module
+        self.builder = builder
+        self.name = name
+        self.argslist = argslist
+        if type(self.argslist) != list:
+            self.argslist = [argslist]
+    
+    def eval(self):
+        return self.builder.call(functions[self.name], self.argslist)
+
+class ReturnValue():
+    def __init__(self, builder, module, value):
+        self.builder = builder
+        self.module = module
+        self.value = value
+    
+    def eval(self):
+        self.builder.ret(self.value.eval())
+
+class Parser():
+    def __init__(self, module, builder, printf, definations = {}):
+        self.pg = ParserGenerator(
+            # A list of all token names accepted by the parser.
+            ['NUMBER', 'WRITE', 'WRITELN', 'OPEN_PAREN', 'CLOSE_PAREN',
+             'SEMI_COLON', 'SUM', 'SUB','MUL','DIV','MOD', 'VAR', 'ASSIGN',
+             'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
+             'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ',
+             'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY',
+             'NOPS','FUNCTION', 'RETURN', 'FOR'
+             ],
+            
+             
+             precedence = [
+                ('left', ['SUM', 'SUB']),
+                ('left', ['MUL', 'DIV']),
+                ('left', ['MOD'])
+            ]
+        )
+        self.module = module
+        self.builder = builder
+        self.printf = printf
+
+        initialize(builder, module, definations)
+
+    def parse(self):
+        @self.pg.production('program : statements')
+        def program(p):
+            return Statements(self.builder, self.module, p)
+
+        @self.pg.production('statements : onestatement')
+        @self.pg.production('statements : statements onestatement')
+        def statements(p):
+            return Line(self.builder, self.module, p)
+
+        
+
+        @self.pg.production('onestatement : forstatement')
+        @self.pg.production('onestatement : ifelsestatement')
+        @self.pg.production('onestatement : semicolon SEMI_COLON')
+        def onestatement(p):
+            print(p[0])
+            return Line(self.builder, self.module, p[0])
+
+
+        @self.pg.production('semicolon : noopsstatement')
+        @self.pg.production('semicolon : functiondefination')
+        @self.pg.production('semicolon : returnstatement')
+        @self.pg.production('semicolon : functioncall')
+        @self.pg.production('semicolon : writestatement')
+        @self.pg.production('semicolon : writelnstatement')
+        @self.pg.production('semicolon : assignmentstatement')
+        def semicolonstatement(p):
+            return p[0]
+
+
+        '''
+        ------- All Statements in the language -----------
+        '''
+        @self.pg.production('noopsstatement : NOPS SEMI_COLON')
+        def noopsstatement(p):
+            return Line(self.builder, self.module, [])
+            
+
+        @self.pg.production('functiondefination : FUNCTION VAR OPEN_PAREN argslist CLOSE_PAREN')
+        @self.pg.production('functiondefination : FUNCTION VAR OPEN_PAREN CLOSE_PAREN')
+        def functiondefination(p):
+            if len(p) == 4:
+                return DefineFunction(self.builder, self.module, self.printf, p[1].value, [])
+            else:
+                return DefineFunction(self.builder, self.module, self.printf, p[1].value, p[3])
+
+
+        
+        
+        @self.pg.production('expresslist : expression')
+        @self.pg.production('expresslist : expresslist COMMA expression')
+        def expresslist(p):
+            if len(p) == 1:
+                return p[0].eval()
+            
+            else:
+                values = p[:-1:2]
+                if type(values[0]) == list:
+                    values[0].append(p[-1].eval())
+                    return values[0]
+                else:
+                    values.append(p[-1].eval())
+                    return values
+        
+        
+        @self.pg.production('argslist : VAR')
+        @self.pg.production('argslist : argslist COMMA VAR')
+        def argslist(p):
+            if len(p) == 1:
+                return p[0].value
+            
+            else:
+                values = p[:-1:2]
+                if type(values[0]) == list:
+                    values[0].append(p[-1].value)
+                    return values[0]
+                else:
+                    values.append(p[-1].value)
+                    return values
+
+
+        @self.pg.production('returnstatement : RETURN expression')
+        def returnstatement(p):
+            return ReturnValue(self.builder, self.module, p[1])
+
+        @self.pg.production('assignmentstatement : VAR ASSIGN expression')
+        @self.pg.production('assignmentstatement : VAR ASSIGN functioncall')
+        def assignmentstatement(p):
+            return Assign(self.builder, self.module, p[0].value, p[2])
+            
+
+        
+        @self.pg.production('functioncall : VAR OPEN_PAREN CLOSE_PAREN')
+        @self.pg.production('functioncall : VAR OPEN_PAREN expresslist CLOSE_PAREN')
+        def functincall(p):
+            if len(p) == 4:
+                return CallFunction(self.builder, self.module, p[0].value, [])
+            else:
+                return CallFunction(self.builder, self.module, p[0].value, p[2])        
+
+        
+        @self.pg.production('writestatement : WRITE OPEN_PAREN printstatement CLOSE_PAREN')
+        def writestatement(p):
+            return Line(self.builder, self.module, p[2])
+
+        @self.pg.production('writelnstatement : WRITELN OPEN_PAREN printstatement CLOSE_PAREN')
+        def writelnstatement(p):
+            withnewline = p[2].value
+            withnewline.append(Write(self.builder, self.module, self.printf, String("\n", trim = False)))
+            return Line(self.builder, self.module, withnewline)
+
+        @self.pg.production('printstatement : oneprintstatement')
+        @self.pg.production('printstatement : printstatement COMMA oneprintstatement')
+        def printstatement(p):
+            return Line(self.builder, self.module, p[::2])
+
+        @self.pg.production('oneprintstatement : allexpression')
+        @self.pg.production('oneprintstatement : STRING')
+        def oneprintstatement(p):
+            try:
+                isString = p[0].gettokentype()
+                return Write(self.builder, self.module, self.printf, String(p[0].value))
+            except AttributeError:
+                return Write(self.builder, self.module, self.printf, p[0])
+            return Write(self.builder, self.module, self.printf, p[0])
+
+
+        @self.pg.production('ifelsestatement : IF log_expression block ELSE block')
+        @self.pg.production('ifelsestatement : IF log_expression block')
+        def ifelsestatement(p):
+            if len(p) == 3:
+                return If(self.builder, self.module, p[1], p[2])
+            else:
+                return IfElse(self.builder, self.module, p[1], p[2], p[4])
+
+        @self.pg.production('forstatement : FOR OPEN_PAREN assignmentstatement SEMI_COLON log_expression SEMI_COLON assignmentstatement CLOSE_PAREN block')
+        def forstatement(p):
+            return For(self.builder, self.module, p[2], p[4], p[6], p[8])
+
+        @self.pg.production('block : onestatement')
+        @self.pg.production('block : OPEN_CURLY statements CLOSE_CURLY')
+        def block(p):
+            print(3)
+            if len(p) == 1:
+                return Line(self.builder, self.module, p[0])
+            else:
+                return Line(self.builder, self.module, p[1])
+
+        '''
+        ------- All Expressions in the language -----------
+        '''
+        @self.pg.production('allexpression : expression')
+        @self.pg.production('allexpression : log_expression')
+        def allexpression(p):
+            return Line(self.builder, self.module, p[0])
+
+        
+
+        ## Logical Expressions
+        @self.pg.production('log_expression : log_expression OR log_expression')
+        @self.pg.production('log_expression : log_expression AND log_expression')
+        @self.pg.production('log_expression : NOT log_expression')
+        def log_expression(p):
+
+            if len(p) == 3:
+                # And Or case
+                left = p[0]
+                right = p[2]
+                operator = p[1]
+
+                if operator.gettokentype() == 'OR':
+                    return Or(self.builder, self.module, left, right)
+                else:
+                    return And(self.builder, self.module, left, right)
+            else:
+                return Not(self.builder, self.module, p[1])
+
+
+        
+        @self.pg.production('log_expression : TRUE')
+        @self.pg.production('log_expression : FALSE')
+        @self.pg.production('log_expression : OPEN_PAREN log_expression CLOSE_PAREN')
+        def log_expression_value(p):
+            if p[0].gettokentype() == 'TRUE':
+                return Bool(self.builder, self.module, True)
+            elif p[0].gettokentype() == "FALSE":
+                return Bool(self.builder, self.module, False)
+            else:
+                return Line(self.builder, self.module, p[1])
+
+
+        @self.pg.production('log_expression : rel_expression')
+        def log_expression_relation(p):
+            return Line(self.builder, self.module, p[0])
+
+
+        
+
+        ## Relational expressions
+        @self.pg.production('rel_expression : expression EQUALS expression')
+        @self.pg.production('rel_expression : expression LESS expression')
+        @self.pg.production('rel_expression : expression GREATER expression')
+        @self.pg.production('rel_expression : expression LESS_EQ expression')
+        @self.pg.production('rel_expression : expression GREAT_EQ expression')
+        def arithmatic_relations(p):
+            left = p[0]
+            right = p[2]
+            operator = p[1]
+            if operator.gettokentype() == 'EQUALS':
+                return Equals(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'LESS':
+                return Less(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'GREATER':
+                return Greater(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'LESS_EQ':
+                return LessEq(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'GREAT_EQ':
+                return GreatEq(self.builder, self.module, left, right)
+
+
+        ## Arithmatic Expressions
+        @self.pg.production('expression : expression SUM expression')
+        @self.pg.production('expression : expression SUB expression')
+        @self.pg.production('expression : expression MUL expression')
+        @self.pg.production('expression : expression DIV expression')
+        @self.pg.production('expression : expression MOD expression')
+        def expression(p):
+            left = p[0]
+            right = p[2]
+            operator = p[1]
+            if operator.gettokentype() == 'SUM':
+                return Sum(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'SUB':
+                return Sub(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'MUL':
+                return Mul(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'DIV':
+                return Div(self.builder, self.module, left, right)
+            elif operator.gettokentype() == 'MOD':
+                return Mod(self.builder, self.module, left, right)
+
+        @self.pg.production('expression : VAR OPEN_PAREN CLOSE_PAREN')
+        @self.pg.production('expression : VAR OPEN_PAREN expresslist CLOSE_PAREN')
+        def callexpression(p):
+            if len(p) == 4:
+                return CallFunction(self.builder, self.module, p[0].value, [])
+            else:
+                return CallFunction(self.builder, self.module, p[0].value, p[2])         
+
+        @self.pg.production('expression : NUMBER')
+        @self.pg.production('expression : VAR')
+        @self.pg.production('expression : OPEN_PAREN expression CLOSE_PAREN')
+        def stopexpression(p):
+            if p[0].gettokentype() == 'NUMBER':
+                return Number(self.builder, self.module, p[0].value)
+
+            elif p[0].gettokentype() == 'VAR':
+                return Var(self.builder, self.module, p[0].value)
+            
+            elif p[0].gettokentype() == 'OPEN_PAREN':
+                return Line(self.builder, self.module, p[1])
+
+        
+        
+
+        @self.pg.error
+        def error_handle(token):
+            raise ValueError(token)
+
+    def get_parser(self):
+        return self.pg.build()
