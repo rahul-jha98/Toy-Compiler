@@ -102,8 +102,16 @@ repeat_for(i = 1; i <= 10; i = i + 1)
 ''')
 
 
+sample_codes.append('''
+a = 0;
+writeln("Enter a number whose table you need");
+input(a);
+repeat_for(i = 1; i < 11; i = i + 1) {
+    writeln(a, " * ", i, " = ", a * i);
+}
+''')
 ## Set code no to 0 1 or 2 depending of
-code_no = 3
+code_no = 4
 
 ## Firstly we initialize the preprocessor with the input we want to use
 preprocessor = Preprocessor(sample_codes[code_no])
@@ -120,10 +128,10 @@ codegen = CodeGen()
 module = codegen.module
 builder = codegen.builder
 printf = codegen.printf
-
+scanf = codegen.scanf
 
 ## Create the parser with given reference
-pg = Parser(module, builder, printf, functions)
+pg = Parser(module, builder, printf, scanf, functions)
 pg.parse()
 parser = pg.get_parser()
 
@@ -131,7 +139,7 @@ parser = pg.get_parser()
 parser.parse(tokens).eval()
 
 ## Uncommenting the below line will print the code generateed
-# print(pg.module)
+print(pg.module)
 
 
 ## Writing intermediate code to ll file

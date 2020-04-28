@@ -42,8 +42,8 @@ class CodeGen():
         self.printf = printf
 
     def _declare_scan_function(self):
-        voidptr_ty = ir.IntType(32).as_pointer()
-        scanf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        voidptr_ty = ir.IntType(8).as_pointer()
+        scanf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg = True)
         scanf = ir.Function(self.module, scanf_ty, name="scanf")
         self.scanf = scanf
 

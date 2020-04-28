@@ -12,6 +12,7 @@ class Lexer():
         # Keywords
         self.lexer.add('WRITELN', r'writeln')
         self.lexer.add('WRITE', r'write')    
+        self.lexer.add('INPUT', r'input')
         self.lexer.add('TRUE', r'True')
         self.lexer.add('FALSE', r'False')
         self.lexer.add('FUNCTION', r'function')

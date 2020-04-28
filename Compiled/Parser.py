@@ -1,13 +1,15 @@
 from rply import ParserGenerator
 from llvmlite import ir
 from Lexer import Lexer
+
+
 '''
     This is the third phase of the compiler. In this case we are parsing the given grammar
     depending on the rules of the language. In case the rule is matched we take the appropriate 
     action.
 '''
 class Parser():
-    def __init__(self, module, builder, printf, definations = {}):
+    def __init__(self, module, builder, printf, scanf, definations = {}):
         self.pg = ParserGenerator(
             # Tokens that can be accepted by our parser
             ['NUMBER', 'WRITE', 'WRITELN', 'OPEN_PAREN', 'CLOSE_PAREN',
@@ -15,7 +17,7 @@ class Parser():
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
              'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ', 'NOT_EQUALS',
              'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY',
-             'NOPS','FUNCTION', 'RETURN', 'FOR'
+             'NOPS','FUNCTION', 'RETURN', 'FOR', 'INPUT'
              ],
             
              
@@ -31,6 +33,7 @@ class Parser():
         self.module = module
         self.builder = builder
         self.printf = printf
+        self.scanf = scanf
 
         ## Initializing the defaults constructs for our language
         ## Like a global string called True, False etc.
@@ -73,6 +76,7 @@ class Parser():
         @self.pg.production('semicolon : noopsstatement')
         @self.pg.production('semicolon : functiondefination')
         @self.pg.production('semicolon : returnstatement')
+        @self.pg.production('semicolon : inputstatement')
         @self.pg.production('semicolon : functioncall')
         @self.pg.production('semicolon : writestatement')
         @self.pg.production('semicolon : writelnstatement')
@@ -109,10 +113,10 @@ class Parser():
             if len(p) == 4:
                 ## If len is 4 that means we have no arguments in the function
                 ## p[1].value is the name of the function
-                return DefineFunction(self.builder, self.module, self.printf, p[1].value, [])
+                return DefineFunction(self.builder, self.module, self.printf, self.scanf, p[1].value, [])
             else:
                 ## p[3] is supposed to give argslist in the next case
-                return DefineFunction(self.builder, self.module, self.printf, p[1].value, p[3])
+                return DefineFunction(self.builder, self.module, self.printf, self.scanf, p[1].value, p[3])
 
 
         
@@ -155,7 +159,7 @@ class Parser():
 
 
 
-        ## wwite takes a list of printable statements and prints it one by one
+        ## write takes a list of printable statements and prints it one by one
         ## Eg : write(2, 2 == 2, "Rahul")
         ## should print 2 True Rahul in console
         @self.pg.production('writestatement : WRITE OPEN_PAREN printstatement CLOSE_PAREN')
@@ -171,6 +175,9 @@ class Parser():
             return Line(self.builder, self.module, withnewline)
 
 
+        @self.pg.production('inputstatement : INPUT OPEN_PAREN VAR CLOSE_PAREN')
+        def inputstatement(p):
+            return Input(self.builder, self.module, self.scanf, p[2].value)
 
         ## printstatement is a list of printable statements comma separated
         @self.pg.production('printstatement : oneprintstatement')
@@ -400,7 +407,7 @@ print_count = 0
 ## Variables holidng global reference to string True and False
 globalTrue = None
 globalFalse = None
-
+globalInt = None
 
 ## Functins are list of functions in the language
 functions_ir = {}
@@ -417,7 +424,7 @@ scopeStack.append(allvariables)
 variables = scopeStack[0]
 
 def initialize(builder, module, definations):
-    global globalTrue, globalFalse, function_definations
+    global globalTrue, globalFalse, globalInt, function_definations
 
     function_definations = definations
 
@@ -452,6 +459,22 @@ def initialize(builder, module, definations):
         global_fmt.initializer = c_fmt
         fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
         globalFalse = fmt_arg
+
+
+        fmt = "%d\0"
+        
+        voidptr_ty = ir.IntType(8).as_pointer()
+
+        c_fmt = ir.Constant(ir.ArrayType(ir.IntType(8), len(fmt)),
+                            bytearray(fmt.encode("utf8")))
+
+        ## Setting global variable for the file
+        global_fmt = ir.GlobalVariable(module, c_fmt.type, name="int")
+
+        global_fmt.linkage = 'internal'
+        global_fmt.global_constant = True
+        global_fmt.initializer = c_fmt
+        globalInt = builder.bitcast(global_fmt, voidptr_ty)
 
 
 class Number():
@@ -750,7 +773,8 @@ class Write():
             passvalue = False
             fmt = value + '\0'
         elif value.type == ir.IntType(32):
-            fmt = "%d \0"
+            self.builder.call(self.printf, [globalInt, value])
+            return
         elif value.type == ir.FloatType(32):
             fmt = "%f \0"
         else:
@@ -777,6 +801,27 @@ class Write():
         else:
             self.builder.call(self.printf, [fmt_arg])
 
+
+
+## Write calls the C native printf with the appropriate arguments to print it on the cammand line
+class Input():
+    def __init__(self, builder, module, scanf, var):
+        self.builder = builder
+        self.module = module
+        self.scanf = scanf
+        self.var = var
+
+    def eval(self):
+        address = variables.get(self.var, None)
+        global print_count
+
+        if address == None:
+            raise Exception("Variable with name {} is not defined".format(self.var))
+
+        
+        print(address)
+        self.builder.call(self.scanf, [globalInt, address])
+        
 
 '''
 Uptil this point the AST methods were using predefined constructs.
@@ -823,12 +868,13 @@ class For():
 
 
 class DefineFunction():
-    def __init__(self, builder, module, printf, name, argslist):
+    def __init__(self, builder, module, printf, scanf, name, argslist):
         self.builder = builder
         self.module = module
         self.name = name
         self.argslist = argslist
         self.printf = printf
+        self.scanf = scanf
 
     def eval(self):
         ## Creating the function type
@@ -865,7 +911,7 @@ class DefineFunction():
 
         ## Since the parser fills the block of passed builder so we can't use our previous
         ## builder and thus we create a new parser with new builder
-        pg = Parser(self.module, self.builder, self.printf, function_definations)
+        pg = Parser(self.module, self.builder, self.printf, self.scanf, function_definations)
         pg.parse()
         parser = pg.get_parser()
         parser.parse(tokens).eval()
