@@ -21,6 +21,7 @@ class Lexer():
         self.lexer.add('IF', r'if')
         self.lexer.add('ELSE', r'else')
         self.lexer.add('FOR', r'repeat_for')
+        self.lexer.add('WHILE', r'repeat_while')
         self.lexer.add('NOPS', r'nothing')
         
 

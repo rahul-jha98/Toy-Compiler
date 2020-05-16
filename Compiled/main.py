@@ -8,6 +8,7 @@ import os
 
 sample_codes = []
 
+
 ## Code 0 : Factorial
 ## This is a code showing the use of functions in our language
 sample_codes.append('''
@@ -32,7 +33,6 @@ a = 6;
 b = factorial(a);
 writeln("The factorial of ", a, " is ", b);
 ''')
-
 
 ## Code : 1 Nested for
 ## Program showing if else and for in our language
@@ -66,7 +66,7 @@ function updatevalue(a, b) {
     b = b / 2;
 
     ## We also display the values in function
-    writeln("The values of a and b in functions is ", a, b);
+    writeln("The values of a and b in functions is ");
 
     return 0;
 }
@@ -98,10 +98,11 @@ function fib(a) {
 }
 
 repeat_for(i = 1; i <= 10; i = i + 1)
-    writeln("Fibonacci ", i, "is ", fib(i));
+    writeln("Fibonacci ", i, " is ", fib(i));
 ''')
 
-
+## Code 4 : User input
+## Our language also supports inputing a number
 sample_codes.append('''
 a = 0;
 writeln("Enter a number whose table you need");
@@ -109,7 +110,10 @@ input(a);
 repeat_for(i = 1; i < 11; i = i + 1) {
     writeln(a, " * ", i, " = ", a * i);
 }
+
+writeln(2 == 10);
 ''')
+
 ## Set code no to 0 1 or 2 depending of
 code_no = 4
 
@@ -118,10 +122,10 @@ preprocessor = Preprocessor(sample_codes[code_no])
 
 ## The nwe get the updated text and functions definations
 text_input, functions = preprocessor.get_processed_input()
+
 ## We get the tokens by initializing the lexer
 lexer = Lexer().get_lexer()
 tokens = lexer.lex(text_input)
-
 ## We initialize the codegenerator the get the ir builder and printf
 codegen = CodeGen()
 

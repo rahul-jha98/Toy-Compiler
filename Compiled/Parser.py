@@ -17,7 +17,7 @@ class Parser():
              'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
              'EQUALS', 'LESS', 'GREATER', 'LESS_EQ', 'GREAT_EQ', 'NOT_EQUALS',
              'COMMA', 'STRING', 'IF', 'ELSE', 'OPEN_CURLY', 'CLOSE_CURLY',
-             'NOPS','FUNCTION', 'RETURN', 'FOR', 'INPUT'
+             'NOPS','FUNCTION', 'RETURN', 'FOR', 'INPUT', 'WHILE'
              ],
             
              
@@ -65,6 +65,7 @@ class Parser():
         ##          semicolon statement followed by SEMI_COLON token. ';'
         @self.pg.production('onestatement : forstatement')
         @self.pg.production('onestatement : ifelsestatement')
+        @self.pg.production('onestatement : whilestatement')
         @self.pg.production('onestatement : semicolon SEMI_COLON')
         def onestatement(p):
             return Line(self.builder, self.module, p[0])
@@ -97,7 +98,7 @@ class Parser():
         ## but don't know what to do as of now. Leaving a block empty throws error.
         ## So, you can write 'nothing;' which is a valid construct and also 
         ## as the name suggests does nothing :)
-        @self.pg.production('noopsstatement : NOPS SEMI_COLON')
+        @self.pg.production('noopsstatement : NOPS')
         def noopsstatement(p):
             ## Passing empty list thus adding no construct to the code
             return Line(self.builder, self.module, [])
@@ -245,6 +246,11 @@ class Parser():
         def forstatement(p):
             return For(self.builder, self.module, p[2], p[4], p[6], p[8])
 
+        ## While has the syntax like 
+        ## while(logical_expression) block
+        @self.pg.production('whilestatement : WHILE OPEN_PAREN log_expression CLOSE_PAREN block')
+        def whilestatement(p):
+            return While(self.builder,self.module,p[2],p[4])
 
         ## A block is a single statement
         ## In case you need multiple statements you need to enclose it in curly braces
@@ -366,13 +372,9 @@ class Parser():
 
 
         ## A function call is also a valid expression
-        @self.pg.production('expression : VAR OPEN_PAREN CLOSE_PAREN')
-        @self.pg.production('expression : VAR OPEN_PAREN expresslist CLOSE_PAREN')
-        def callexpression(p):
-            if len(p) == 3:
-                return CallFunction(self.builder, self.module, p[0].value, [])
-            else:
-                return CallFunction(self.builder, self.module, p[0].value, p[2])         
+        @self.pg.production('expression : functioncall')
+        def callexpression(p):            
+            return p[0]        
 
 
         ## A number, variable or (expression) are also expression
@@ -775,8 +777,6 @@ class Write():
         elif value.type == ir.IntType(32):
             self.builder.call(self.printf, [globalInt, value])
             return
-        elif value.type == ir.FloatType(32):
-            fmt = "%f \0"
         else:
             print_true_or_false(self.builder, self.module, self.printf, value)
             return
@@ -865,7 +865,37 @@ class For():
         Scope(-1).eval()
 
 
+## While loop is almost same as for loop
+class While():
+    def __init__(self,builder,module,cond,block):
+        global for_count
+        self.builder = builder
+        self.module = module
+        self.cond = cond
+        self.block = Line(builder,module,[Scope(1), block, Scope(-1)])
+        self.while_count = for_count
+        for_count += 1
 
+    def eval(self):
+        
+        loop = self.builder.append_basic_block(f'while_loop{self.while_count}')
+
+        self.builder.branch(loop)
+        self.builder.position_at_start(loop)
+
+        predicate = self.cond.eval()
+
+        with self.builder.if_then(predicate) as then:
+            Scope(1).eval()
+            self.block.eval()
+
+            predicate = self.cond.eval()
+
+            loop_end = self.builder.block
+            loop_end_bb = self.builder.append_basic_block(f'afterloop{self.while_count}')
+            self.builder.cbranch(predicate,loop,loop_end_bb)
+            self.builder.position_at_start(loop_end_bb)
+            Scope(-1).eval()
 
 class DefineFunction():
     def __init__(self, builder, module, printf, scanf, name, argslist):

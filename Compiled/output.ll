@@ -44,9 +44,20 @@ loop0.if:
   %".27" = icmp slt i32 %"i.5", 11
   br i1 %".27", label %"loop0", label %"afterloop0"
 loop0.endif:
-  ret void
+  %".30" = icmp eq i32 2, 10
+  br i1 %".30", label %"loop0.endif.if", label %"loop0.endif.else"
 afterloop0:
   br label %"loop0.endif"
+loop0.endif.if:
+  %".32" = call i32 (i8*, ...) @"printf"(i8* %".2")
+  br label %"loop0.endif.endif"
+loop0.endif.else:
+  %".34" = call i32 (i8*, ...) @"printf"(i8* %".3")
+  br label %"loop0.endif.endif"
+loop0.endif.endif:
+  %".36" = bitcast [2 x i8]* @"fstr5" to i8*
+  %".37" = call i32 (i8*, ...) @"printf"(i8* %".36")
+  ret void
 }
 
 declare i32 @"printf"(i8* %".1", ...) 
@@ -61,3 +72,4 @@ declare i32 @"scanf"(i8* %".1", ...)
 @"fstr2" = internal constant [4 x i8] c" * \00"
 @"fstr3" = internal constant [4 x i8] c" = \00"
 @"fstr4" = internal constant [2 x i8] c"\0a\00"
+@"fstr5" = internal constant [2 x i8] c"\0a\00"
