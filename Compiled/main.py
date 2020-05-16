@@ -66,7 +66,7 @@ function updatevalue(a, b) {
     b = b / 2;
 
     ## We also display the values in function
-    writeln("The values of a and b in functions is ");
+    writeln("The values of a and b in functions is ", a, b);
 
     return 0;
 }
@@ -115,7 +115,7 @@ writeln(2 == 10);
 ''')
 
 ## Set code no to 0 1 or 2 depending of
-code_no = 4
+code_no = 2
 
 ## Firstly we initialize the preprocessor with the input we want to use
 preprocessor = Preprocessor(sample_codes[code_no])
@@ -143,7 +143,7 @@ parser = pg.get_parser()
 parser.parse(tokens).eval()
 
 ## Uncommenting the below line will print the code generateed
-print(pg.module)
+# print(pg.module)
 
 
 ## Writing intermediate code to ll file

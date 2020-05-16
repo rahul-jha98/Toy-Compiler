@@ -39,6 +39,11 @@ class Parser():
         ## Like a global string called True, False etc.
         initialize(builder, module, definations)
 
+        self.constants = {}
+        self.constants['false'] = self.builder.bitcast(globalFalse, globalVoidPtr)
+        self.constants['true'] = self.builder.bitcast(globalTrue, globalVoidPtr)
+        self.constants['int'] = self.builder.bitcast(globalInt, globalVoidPtr)
+
 
 
 
@@ -172,13 +177,13 @@ class Parser():
         def writelnstatement(p):
             withnewline = p[2].value
             ## Append a Write commant to print \n at the end of previous list
-            withnewline.append(Write(self.builder, self.module, self.printf, String("\n", trim = False)))
+            withnewline.append(Write(self.builder, self.module, self.printf, String("\n", trim = False), self.constants))
             return Line(self.builder, self.module, withnewline)
 
 
         @self.pg.production('inputstatement : INPUT OPEN_PAREN VAR CLOSE_PAREN')
         def inputstatement(p):
-            return Input(self.builder, self.module, self.scanf, p[2].value)
+            return Input(self.builder, self.module, self.scanf, p[2].value, self.constants)
 
         ## printstatement is a list of printable statements comma separated
         @self.pg.production('printstatement : oneprintstatement')
@@ -193,10 +198,10 @@ class Parser():
         def oneprintstatement(p):
             try:
                 isString = p[0].gettokentype()
-                return Write(self.builder, self.module, self.printf, String(p[0].value))
+                return Write(self.builder, self.module, self.printf, String(p[0].value), self.constants)
             except AttributeError:
-                return Write(self.builder, self.module, self.printf, p[0])
-            return Write(self.builder, self.module, self.printf, p[0])
+                return Write(self.builder, self.module, self.printf, p[0], self.constants)
+            return Write(self.builder, self.module, self.printf, p[0], self.constants)
 
 
 
@@ -410,6 +415,7 @@ print_count = 0
 globalTrue = None
 globalFalse = None
 globalInt = None
+globalVoidPtr = None
 
 ## Functins are list of functions in the language
 functions_ir = {}
@@ -426,7 +432,7 @@ scopeStack.append(allvariables)
 variables = scopeStack[0]
 
 def initialize(builder, module, definations):
-    global globalTrue, globalFalse, globalInt, function_definations
+    global globalTrue, globalFalse, globalInt, globalVoidPtr, function_definations
 
     function_definations = definations
 
@@ -443,8 +449,7 @@ def initialize(builder, module, definations):
         global_fmt.linkage = 'internal'
         global_fmt.global_constant = True
         global_fmt.initializer = c_fmt
-        fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
-        globalTrue = fmt_arg
+        globalTrue = global_fmt
 
 
         fmt = "False" + '\0'
@@ -459,11 +464,10 @@ def initialize(builder, module, definations):
         global_fmt.linkage = 'internal'
         global_fmt.global_constant = True
         global_fmt.initializer = c_fmt
-        fmt_arg = builder.bitcast(global_fmt, voidptr_ty)
-        globalFalse = fmt_arg
+        globalFalse = global_fmt
 
 
-        fmt = "%d\0"
+        fmt = "%d \0"
         
         voidptr_ty = ir.IntType(8).as_pointer()
 
@@ -476,7 +480,12 @@ def initialize(builder, module, definations):
         global_fmt.linkage = 'internal'
         global_fmt.global_constant = True
         global_fmt.initializer = c_fmt
-        globalInt = builder.bitcast(global_fmt, voidptr_ty)
+
+        globalInt = global_fmt
+
+        globalVoidPtr = voidptr_ty
+    
+
 
 
 class Number():
@@ -747,23 +756,24 @@ class Scope():
 
 ## If the value is boolean we print the global String 
 ## True of False in the console
-def print_true_or_false(builder, module, printf, predicate):
+def print_true_or_false(builder, module, printf, predicate, constants):
     with builder.if_else(predicate) as (then, otherwise):
         with then:
-            builder.call(printf, [globalTrue])
+            builder.call(printf, [constants['true']])
         with otherwise:
-            builder.call(printf, [globalFalse])
+            builder.call(printf, [constants['false']])
 
 
 
 
 ## Write calls the C native printf with the appropriate arguments to print it on the cammand line
 class Write():
-    def __init__(self, builder, module, printf, value):
+    def __init__(self, builder, module, printf, value, constants = {}):
         self.builder = builder
         self.module = module
         self.printf = printf
         self.value = value
+        self.constants = constants
 
     def eval(self):
         global print_count
@@ -775,10 +785,10 @@ class Write():
             passvalue = False
             fmt = value + '\0'
         elif value.type == ir.IntType(32):
-            self.builder.call(self.printf, [globalInt, value])
+            self.builder.call(self.printf, [self.constants['int'], value])
             return
         else:
-            print_true_or_false(self.builder, self.module, self.printf, value)
+            print_true_or_false(self.builder, self.module, self.printf, value, self.constants)
             return
 
         voidptr_ty = ir.IntType(8).as_pointer()
@@ -805,11 +815,12 @@ class Write():
 
 ## Write calls the C native printf with the appropriate arguments to print it on the cammand line
 class Input():
-    def __init__(self, builder, module, scanf, var):
+    def __init__(self, builder, module, scanf, var, constants):
         self.builder = builder
         self.module = module
         self.scanf = scanf
         self.var = var
+        self.constants = constants
 
     def eval(self):
         address = variables.get(self.var, None)
@@ -820,7 +831,7 @@ class Input():
 
         
         print(address)
-        self.builder.call(self.scanf, [globalInt, address])
+        self.builder.call(self.scanf, [self.constants['int'], address])
         
 
 '''
